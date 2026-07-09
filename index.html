@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Amigos do Forró</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap');
+      
+      body {
+        margin: 0; font-family: 'Segoe UI', sans-serif;
+        background-color: #2b1b12; color: #e8dccb;
+        padding: 0; box-sizing: border-box;
+        scrollbar-width: thin; scrollbar-color: #d84315 #2b1b12;
+        overflow-x: hidden;
+      }
+      body::-webkit-scrollbar { width: 10px; }
+      body::-webkit-scrollbar-track { background: #2b1b12; }
+      body::-webkit-scrollbar-thumb { background-color: #d84315; border-radius: 10px; }
+
+      /* Cabeçalho Persistente (Sticky) */
+      .sticky-header {
+        position: sticky; top: 0; z-index: 1000;
+        background-color: rgba(156, 92, 56, 0.95); /* Cor #9c5c38 com 95% de opacidade */
+        backdrop-filter: blur(8px);
+        padding: 10px 5mm;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      }
+
+      /* Atalhos */
+      .atalhos { margin: 0 auto; max-width: 800px; }
+      .atalhos-lista {
+        list-style: none; padding: 0; margin: 0; display: flex; gap: 8px; 
+        justify-content: center; flex-wrap: wrap; overflow: visible;
+      }
+      
+      .atalhos-lista li {
+        flex: 0 0 auto; background-color: rgba(232, 195, 150, 0.8); border-radius: 12px; cursor: pointer;
+        transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        height: 32px; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+        padding: 0 12px; color: #2b1b12; font-weight: 700; font-size: 0.9rem;
+      }
+      .atalhos-lista li:hover { background-color: rgba(209, 165, 114, 0.9); transform: translateY(-2px); color: #1a100b; }
+
+      /* Regra para telas pequenas */
+      @media (max-width: 400px) {
+        .atalhos-lista { gap: 4px; }
+        .atalhos-lista li { padding: 0 7px; font-size: 0.75rem; height: 30px; }
+      }
+
+      /* Toast "Em Breve" */
+      #toast {
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: rgba(43, 27, 18, 0.95); color: white; padding: 15px 30px;
+        border-radius: 12px; font-size: 1.2rem; font-weight: bold; border: 2px solid #d84315;
+        z-index: 4000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      }
+      #toast.show { opacity: 1; }
+
+      /* Container Principal */
+      .main-container {
+        width: 100vw; max-width: 100%; overflow-x: hidden; padding: 0 5mm; box-sizing: border-box;
+      }
+
+      .hero { text-align: center; padding: 20px 20px 10px; width: 100%; box-sizing: border-box; }
+      .hero p {
+        font-family: 'Playfair Display', serif; font-size: clamp(1.4rem, 8vw, 2.5rem); font-weight: 700;
+        margin-bottom: 8px; margin-top: 0; text-shadow: 0 0 12px rgba(232, 195, 150, 0.7);
+        animation: scaleOpacity 2s infinite alternate; color: #E8C396;
+        white-space: nowrap; display: block; width: 100%; text-align: center;
+      }
+      .hero h1 { font-size: 1rem; font-weight: 600; color: #E8C396; margin: 0; animation: pulse 2s infinite alternate; }
+      
+      #hero-title { transition: opacity 0.4s ease; display: inline-block; }
+
+      @keyframes scaleOpacity { to { transform: scale(1.05); opacity: 0.9; } }
+      @keyframes pulse { to { transform: scale(1.025); } }
+
+      @keyframes pulseGlow {
+        0% { box-shadow: 0 4px 6px rgba(0,0,0,0.3); transform: scale(1); }
+        30% { box-shadow: 0 0 25px 8px rgba(216, 67, 21, 0.4); transform: scale(1.02); }
+        100% { box-shadow: 0 4px 6px rgba(0,0,0,0.3); transform: scale(1); }
+      }
+      .glow-effect { animation: pulseGlow 2s ease-out; }
+
+      /* Títulos clicáveis */
+      .section-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.5rem; 
+        font-weight: 700; color: #ffb74d;
+        margin: 15px auto 2px; text-align: center; 
+        transition: text-shadow 0.3s, opacity 0.4s ease, color 0.3s;
+        cursor: pointer;
+      }
+      /* Opacidade em 80% quando a seção está em foco, e 100% no hover */
+      .section-title.in-focus { opacity: 0.8; }
+      .section-title:hover { text-shadow: 0 0 10px rgba(255,183,77,0.5); color: #ffcc80; opacity: 1; }
+
+      .card {
+        width: 100%; max-width: 800px; box-sizing: border-box; 
+        margin: 8px auto 15px; padding: 20px;
+        background-color: #9c5c38; border-radius: 20px; color: #f5ece1;
+        font-size: 1.05rem; line-height: 1.5; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        cursor: pointer; 
+        transition: opacity 0.4s ease, box-shadow 0.3s, background-color 0.3s;
+        position: relative; border: 1px solid rgba(216, 67, 21, 0.2);
+      }
+      .card.open { cursor: default; }
+
+      .card.expandable {
+        max-height: 165px; overflow: hidden;
+        transition: max-height 0.4s ease, opacity 0.4s ease, box-shadow 0.3s, background-color 0.3s;
+      }
+      .card.expandable.open { max-height: 1500px; }
+      
+      .card.expandable::after {
+        content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+        background: linear-gradient(transparent, #9c5c38 90%); pointer-events: none; border-radius: 20px;
+        transition: opacity 0.4s ease;
+      }
+      .card.expandable.open::after { opacity: 0; }
+
+      .fade-section { opacity: 0.4; transition: opacity 0.4s ease; }
+      .fade-section.in-focus { opacity: 1; }
+
+      /* Fundo da Caixa de Descrição */
+      #card-descricao::before {
+        content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background-image: url('https://raw.githubusercontent.com/espaco-digital/espaco-digital.github.io/main/espacodigital/imagens/imagem2.png');
+        background-size: cover; background-position: center;
+        opacity: 0.1; pointer-events: none; border-radius: 20px;
+      }
+      #card-descricao > div { position: relative; }
+
+      /* Imagem da Agenda */
+      .agenda-img {
+        width: 100%; height: auto; display: block; border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.4); cursor: pointer; transition: transform 0.3s;
+      }
+      .agenda-img:hover { transform: scale(1.02); }
+
+      /* Modal de Imagem (Lightbox) */
+      #lightbox {
+        display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: rgba(0, 0, 0, 0.9); z-index: 3000;
+        align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease;
+      }
+      #lightbox.show { opacity: 1; }
+      #lightbox img {
+        max-width: 95vw; max-height: 95vh; object-fit: contain;
+        border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.8);
+      }
+      /* Em modo paisagem (celular deitado), ocupa toda a tela */
+      @media (orientation: landscape) and (max-height: 600px) {
+        #lightbox img { max-width: 100vw; max-height: 100vh; border-radius: 0; }
+      }
+      #lightbox-close {
+        position: absolute; top: 20px; right: 20px;
+        background: rgba(216, 67, 21, 0.8); color: white; border: none;
+        width: 40px; height: 40px; border-radius: 50%; font-size: 20px; font-weight: bold;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        transition: background 0.3s; z-index: 3001;
+      }
+      #lightbox-close:hover { background: #bf360c; }
+
+      /* Ícones Contato */
+      .icones { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+      .icone { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.3s; }
+      .icone:hover { transform: scale(1.15); }
+      .icone img { width: 45px; height: 45px; object-fit: contain; }
+      
+      /* Escala de Cinza para ícones inativos */
+      .icone.grayscale img { filter: grayscale(100%); opacity: 0.5; transition: 0.3s; }
+      .icone.grayscale:hover img { opacity: 0.8; }
+
+      /* Popup Contato */
+      .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #9c5c38; padding: 20px; border-radius: 12px; z-index: 2000; box-shadow: 0 4px 15px rgba(0,0,0,0.6); text-align: center; border: 1px solid #d84315; color: #f5ece1; }
+      .popup p { cursor: move; margin-top: 0; font-weight: bold; }
+      .popup button { margin: 5px; padding: 8px 14px; background-color: #d84315; color: #fff; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: 600; }
+      .popup button:hover { background-color: #bf360c; }
+
+      #btnTopo { display: none; position: fixed; bottom: 20px; left: 20px; z-index: 999; background-color: #d84315; color: white; border: 2px solid #2b1b12; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.5); transition: background-color 0.3s, transform 0.3s; }
+      #btnTopo:hover { background-color: #bf360c; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+  <!-- Cabeçalho Persistente (Atalhos) -->
+  <header class="sticky-header">
+    <div class="atalhos">
+      <ul class="atalhos-lista">
+        <li onclick="scrollToSection('descricao', event)">Descrição</li>
+        <li onclick="scrollToSection('agenda', event)">Agenda</li>
+        <li onclick="scrollToSection('midia', event)">Mídia</li>
+        <li onclick="scrollToSection('contato', event)">Contato</li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- Elemento para o aviso de "Em breve" -->
+  <div id="toast">Em breve!</div>
+
+  <div class="main-container">
+    
+    <section class="hero">
+      <p>Amigos do Forró</p>
+      <h1><span id="hero-title">Seja Bem Vindo(a) ao Site Oficial do Grupo!</span></h1>
+    </section>
+
+    <!-- DESCRIÇÃO -->
+    <div class="section-title fade-section" id="descricao" title="Clique para expandir" onclick="toggleCard('card-descricao', event)">Descrição</div>
+    <section class="card expandable fade-section" id="card-descricao" onclick="toggleCard('card-descricao', event)">
+      <div>
+        Bem vindes! Somos forrozeiros de Guaratinguetá e região. O intuito do grupo é fortalecer o movimento do forró, combinar de sair para forrozear e fazer novas amizades!
+      </div>
+    </section>
+
+    <!-- AGENDA -->
+    <div class="section-title fade-section" id="agenda">Agenda</div>
+    <section class="card fade-section" id="card-agenda" style="cursor: default;">
+      <img src="https://raw.githubusercontent.com/espaco-digital/espaco-digital.github.io/main/espacodigital/imagens/Calendário.png" alt="Agenda do Grupo" class="agenda-img" onclick="abrirLightbox(this.src)">
+    </section>
+
+    <!-- MÍDIA -->
+    <div class="section-title fade-section" id="midia">Mídia</div>
+    <section class="card fade-section" id="card-midia" style="cursor: default;">
+      <div style="text-align: center; padding: 30px 10px;">
+        <a href="https://drive.google.com/drive/folders/1iKQeJH68k6Ko-1ESgJ8coV4SOePzXtom" target="_blank" style="color: #E8C396; font-weight: 600; text-decoration: none; font-size: 1.15rem; display: block; transition: color 0.3s; text-shadow: 0 0 5px rgba(232,195,150,0.3);" onmouseover="this.style.color='#D1A572'" onmouseout="this.style.color='#E8C396'">
+          Aqui você consegue ver as fotos e vídeos do nosso drive compartilhado!
+        </a>
+      </div>
+    </section>
+
+    <!-- CONTATO -->
+    <div class="section-title fade-section" id="contato">Contato</div>
+    <section class="card fade-section" id="card-contato" style="cursor: default; margin-bottom: 50px;">
+      <div class="icones">
+        <!-- Ícones Coloridos e Funcionais -->
+        <div class="icone" onclick="mostrarPopup('whatsapp')">
+          <img src="https://raw.githubusercontent.com/espaco-digital/espaco-digital.github.io/main/espacodigital/icones/whatsapp.png" alt="WhatsApp">
+        </div>
+        <div class="icone" onclick="window.open('https://www.instagram.com/amigosdoforro.gta', '_blank')">
+          <img src="https://raw.githubusercontent.com/espaco-digital/espaco-digital.github.io/main/espacodigital/icones/instagram.png" alt="Instagram">
+        </div>
+        
+        <!-- Ícones Escala de Cinza com Aviso 'Em Breve' -->
+        <div class="icone grayscale" onclick="showToast('Em breve!', event)">
+          <img src="https://raw.githubusercontent.com/espaco-digital/espaco-digital.github.io/main/espacodigital/icones/facebook.png" alt="Facebook">
+        </div>
+        <div class="icone grayscale" onclick="showToast('Em breve!', event)">
+          <img src="https://raw.githubusercontent.com/espaco-digital/espaco-digital.github.io/main/espacodigital/icones/tik-tok.png" alt="TikTok">
+        </div>
+        <div class="icone grayscale" onclick="showToast('Em breve!', event)">
+          <img src="https://raw.githubusercontent.com/espaco-digital/espaco-digital.github.io/main/espacodigital/icones/youtube.png" alt="YouTube">
+        </div>
+        <div class="icone grayscale" onclick="showToast('Em breve!', event)">
+          <img src="https://raw.githubusercontent.com/espaco-digital/espaco-digital.github.io/main/espacodigital/icones/gmail.png" alt="Gmail">
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Botão Topo e Modal Global -->
+  <button id="btnTopo" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">Topo</button>
+
+  <div class="popup" id="popup"></div>
+
+  <!-- Lightbox para a Agenda -->
+  <div id="lightbox" onclick="fecharLightbox(event)">
+    <button id="lightbox-close" onclick="fecharLightbox(event)">X</button>
+    <img id="lightbox-img" src="" alt="Agenda Ampliada">
+  </div>
+
+  <script>
+    // ==========================================
+    // ANIMAÇÃO DO TÍTULO DE BOAS VINDAS
+    // ==========================================
+    const heroTitles = ["Seja Bem Vindo(a) ao", "Site Oficial do Grupo!"];
+    let heroIdx = 0;
+    setInterval(() => {
+      const heroEl = document.getElementById('hero-title');
+      if (heroEl) {
+        heroEl.style.opacity = 0;
+        setTimeout(() => {
+          heroIdx = (heroIdx + 1) % heroTitles.length;
+          heroEl.textContent = heroTitles[heroIdx];
+          heroEl.style.opacity = 1;
+        }, 400);
+      }
+    }, 3000);
+
+    // ==========================================
+    // SISTEMA DE TOAST (Notificações)
+    // ==========================================
+    function showToast(msg, event) {
+      if (event) event.stopPropagation();
+      playClickSound();
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    // Fecha popups quando clica em qualquer espaço vazio do site
+    document.addEventListener('click', (e) => {
+      if (popupEl && popupEl.style.display === 'block' && !popupEl.contains(e.target) && !e.target.closest('.icone')) {
+        fecharPopup();
+      }
+    });
+
+    // ==========================================
+    // LÓGICA DO LIGHTBOX (Agenda)
+    // ==========================================
+    function abrirLightbox(src) {
+      playClickSound();
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      lightboxImg.src = src;
+      lightbox.style.display = 'flex';
+      // Pequeno atraso para a animação de fade in funcionar com display flex
+      setTimeout(() => { lightbox.classList.add('show'); }, 10);
+    }
+
+    function fecharLightbox(event) {
+      // Ignora se o clique for diretamente na imagem (deixa clicar nela sem fechar)
+      if (event && event.target.id === 'lightbox-img') return;
+      
+      const lightbox = document.getElementById('lightbox');
+      lightbox.classList.remove('show');
+      setTimeout(() => { lightbox.style.display = 'none'; }, 300);
+    }
+
+    // ==========================================
+    // LÓGICA DE EXPANDIR CAIXAS
+    // ==========================================
+    function toggleCard(cardId, event) {
+      if (event && (
+        event.target.tagName.toLowerCase() === 'a' ||
+        event.target.closest('.agenda-img')
+      )) {
+        return;
+      }
+
+      const card = document.getElementById(cardId);
+      if (!card) return;
+      card.classList.toggle('open');
+    }
+
+    // ==========================================
+    // ROLAGEM DINÂMICA
+    // ==========================================
+    function scrollToSection(id, event) { 
+      if(event) event.stopPropagation();
+
+      const cardId = id === 'contato' ? 'card-contato' : 'card-' + id;
+      const cardEl = document.getElementById(cardId);
+      const headerOffset = document.querySelector('.sticky-header').offsetHeight;
+      
+      if (cardEl) {
+        const elementPosition = cardEl.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset - 20;
+
+        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+
+        cardEl.classList.remove('glow-effect');
+        void cardEl.offsetWidth; 
+        cardEl.classList.add('glow-effect');
+        setTimeout(() => cardEl.classList.remove('glow-effect'), 2000);
+      }
+    }
+
+    // ==========================================
+    // OPACIDADE (Efeito Refletor ao Rolar a Tela)
+    // ==========================================
+    function checkScrollFocus() {
+      const elements = document.querySelectorAll('.fade-section');
+      const viewHeight = window.innerHeight;
+      const viewWidth = window.innerWidth;
+      const centerY = viewHeight / 2;
+      const centerX = viewWidth / 2;
+
+      elements.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        if(rect.height === 0 || rect.width === 0) return; 
+        
+        const elCenterY = rect.top + rect.height / 2;
+        const elCenterX = rect.left + rect.width / 2;
+        
+        const distY = Math.abs(elCenterY - centerY);
+        const distX = Math.abs(elCenterX - centerX);
+
+        if (distY < viewHeight / 3 && distX < viewWidth / 1.5) {
+          el.classList.add('in-focus');
+        } else {
+          el.classList.remove('in-focus');
+        }
+      });
+    }
+    window.addEventListener('scroll', checkScrollFocus);
+    window.addEventListener('resize', checkScrollFocus);
+    setTimeout(checkScrollFocus, 100);
+
+    // ==========================================
+    // POPUPS E BOTÃO TOPO
+    // ==========================================
+    window.addEventListener('scroll', () => {
+      const btnTopo = document.getElementById('btnTopo');
+      if (window.scrollY > window.innerHeight / 3) {
+        btnTopo.style.display = 'block';
+      } else {
+        btnTopo.style.display = 'none';
+      }
+    });
+
+    let popupEl = null, isDraggingContact = false, offsetContact = { x: 0, y: 0 };
+
+    function mostrarPopup(tipo) {
+      const isWpp = tipo === 'whatsapp';
+      // URL para o WhatsApp
+      const valor = isWpp ? 'https://chat.whatsapp.com/L7H25ZQhrj2JEV6ZFlOTHU' : 'wesley.anunnaki@gmail.com';
+      const appLink = isWpp ? valor : `mailto:${valor}`;
+      
+      popupEl = document.getElementById('popup');
+      popupEl.innerHTML = `
+        <p>O que você deseja fazer?</p>
+        <button onclick="copiar('${valor}')">Copiar ${isWpp ? 'WhatsApp' : 'Email'}</button>
+        <button onclick="window.open('${appLink}', '_blank'); fecharPopup();">Abrir Aplicativo</button>
+        <button onclick="fecharPopup()">Cancelar</button>
+      `;
+      popupEl.style.display = 'block';
+    }
+
+    function fecharPopup() { if(popupEl) popupEl.style.display = 'none'; }
+
+    function copiar(texto) {
+      const temp = document.createElement("input");
+      temp.value = texto; document.body.appendChild(temp);
+      temp.select(); document.execCommand("copy"); temp.remove();
+      alert("Copiado com sucesso!"); fecharPopup();
+    }
+
+    document.addEventListener('mousedown', e => {
+      if (e.target.closest('#popup p')) {
+        isDraggingContact = true;
+        const rect = popupEl.getBoundingClientRect();
+        offsetContact = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      }
+    });
+    document.addEventListener('mousemove', e => {
+      if (isDraggingContact && popupEl) {
+        popupEl.style.left = (e.clientX - offsetContact.x) + 'px';
+        popupEl.style.top = (e.clientY - offsetContact.y) + 'px';
+      }
+    });
+    document.addEventListener('mouseup', () => isDraggingContact = false);
+
+    // ==========================================
+    // SOM DE CLIQUE (Feedback Sensorial)
+    // ==========================================
+    let audioCtx = null;
+    function playClickSound() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); 
+      oscillator.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.05);
+      
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+      
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.05);
+    }
+
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.section-title, .card, button, .icone, .atalhos-lista li, .popup, #lightbox-close')) {
+        playClickSound();
+      }
+    });
+
+  </script>
+</body>
+</html>
